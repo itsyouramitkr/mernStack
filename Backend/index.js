@@ -12,6 +12,7 @@ const port = 3088
 app.get('/', (req, res) => {
   res.send('Hello World!')
 });
+
 /// making specific routes
 
 app.use('/api/auth',authUser);
@@ -19,5 +20,5 @@ app.use('/api/notes',authNote);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
-})
+});
 
