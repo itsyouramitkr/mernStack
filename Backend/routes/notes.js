@@ -55,37 +55,70 @@ router.get('/fetchNotes', fetchuser, async (req, res) => {
 
 router.put('/updatenote/:id', fetchuser, async (req, res) => {
     const { title, description, tag } = req.body;
-    const newNote = {};
-    if (title) newNote.title = title;
-    if (description) newNote.description = description;
-    if (tag) newNote.tag = tag;
+    try {
+        const newNote = {};
+        if (title) newNote.title = title;
+        if (description) newNote.description = description;
+        if (tag) newNote.tag = tag;
 
-    // now checking the login user is updating no ohter can update other notes.
+        // now checking the login user is updating no ohter can update other notes.
 
-    let notes = await Notes.findById(req.params.id);
-    if(!notes)
-    {
-        return res.status(404).send({error:"requested id does not found"});
+        let notes = await Notes.findById(req.params.id);
+        if (!notes) {
+            return res.status(404).send({ error: "requested id does not found" });
+        }
+        if (notes.user.toString() !== req.user.id) {
+            return res.status(401).send({ error: "Not Allowed" });
+            /*
+            Here:
+    
+            notes.user.toString() = "68715f090af018cf10680177"
+    
+            req.user.id = "68715f090af018cf10680177" (from fetchuser middleware)
+    
+            ✅ They match → means the note belongs to the logged-in user.
+    
+            ❌ If they didn’t match, it would mean you're trying to update someone else’s note, which is not allowed.
+            */
+        }
+        notes = await Notes.findByIdAndUpdate(req.params.id, { $set: newNote }, { new: true })
+        return res.json({ notes });
+    } catch (error) {
+        console.error(err);
+        return res.status(500).json({ error: "Server Error" });
     }
-    if(notes.user.toString() !== req.user.id)
-    {
-        return res.status(401).send({error:"Not Allowed"});
-        /*
-        Here:
 
-        notes.user.toString() = "68715f090af018cf10680177"
+});
 
-        req.user.id = "68715f090af018cf10680177" (from fetchuser middleware)
-
-        ✅ They match → means the note belongs to the logged-in user.
-
-        ❌ If they didn’t match, it would mean you're trying to update someone else’s note, which is not allowed.
-        */
+router.delete("/deletenote/:id", fetchuser, async (req, res) => {
+    try {
+        let notes = await Notes.findById(req.params.id);
+        if (!notes) {
+            return res.status(404).send({ error: "requested id does not found" });
+        }
+        /// Allow deletion only if user own this notes
+        if (notes.user.toString() !== req.user.id) {
+            return res.status(401).send({ error: "Not Allowed" });
+            /*
+            Here:
+    
+            notes.user.toString() = "68715f090af018cf10680177"
+    
+            req.user.id = "68715f090af018cf10680177" (from fetchuser middleware)
+    
+            ✅ They match → means the note belongs to the logged-in user.
+    
+            ❌ If they didn’t match, it would mean you're trying to update someone else’s note, which is not allowed.
+            */
+        }
+        notes = await Notes.findByIdAndDelete(req.params.id)
+        return res.json({ "success": "notes has been deleted", notes: notes });
+        
+    } catch (error) {
+        console.error(err);
+        return res.status(500).json({ error: "Server Error" });
     }
-    notes = await Notes.findByIdAndUpdate(req.params.id , {$set:newNote},{new:true})
-    return res.json({notes});
 
-
-})
+});
 
 module.exports = router;
